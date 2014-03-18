@@ -628,7 +628,9 @@ static NSString *const kUserEmailIsVerifiedKey    = @"isVerified";
   if ([extendedParams count] > 0) {
     [self addParams:extendedParams toRequest:request];
   }
-  
+    NSLog(@"adding auth header: %@", authHdr);
+    NSLog(@"final request: %@", request);
+ 
 #if GTL_DEBUG_OAUTH_SIGNING
   NSLog(@"adding auth header: %@", authHdr);
   NSLog(@"final request: %@", request);

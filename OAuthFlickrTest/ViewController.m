@@ -21,6 +21,7 @@ static NSString* const kAuthorizeURLstring = @"https://www.flickr.com/services/o
 @property (weak, nonatomic) IBOutlet UITextField *textField;
 @property (weak, nonatomic) IBOutlet UIButton *logInOutButton;
 - (IBAction)loginOutButtonClicked:(id)sender;
+- (IBAction)callApibuttonClicked:(id)sender;
 
 @end
 
@@ -102,7 +103,7 @@ static NSString* const kAuthorizeURLstring = @"https://www.flickr.com/services/o
     NSURL *requestURL = [NSURL URLWithString:kRequestURLstring];
     NSURL *accessURL = [NSURL URLWithString:kAccessURLstring];
     NSURL *authorizeURL = [NSURL URLWithString:kAuthorizeURLstring];
-    NSString *scope = @"write_public";
+    NSString *scope = nil;
     
     GTMOAuthAuthentication *auth = [self authForService];
     if (auth == nil) {
@@ -283,5 +284,46 @@ static NSString* const kAuthorizeURLstring = @"https://www.flickr.com/services/o
         self.logInOutButton.titleLabel.text = @"login";
     }
     [self updateUI];
+}
+
+- (IBAction)callApibuttonClicked:(id)sender {
+    // 対象URL
+    NSURL *url = [NSURL URLWithString:@"http://ycpi.api.flickr.com/services/rest/?method=flickr.people.getPhotos"];
+    
+    // リクエストの作成
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
+    
+    // 2013.03.13 追記
+    // 以下のヘッダーを付け忘れてました。method=flickr.people.getPhotos format=json
+    // 付与しないと、signiture_invalidになる場合があります。
+    //[request setValue:@"application/x.atom+xml" forHTTPHeaderField:@"Content-Type"];
+    [request setValue:@"me" forHTTPHeaderField:@"user_id"];
+    //[request setValue:@"flickr.people.getPhotos" forHTTPHeaderField:@"method"];
+    [request setValue:@"json" forHTTPHeaderField:@"format"];
+    [request setValue:@"1" forHTTPHeaderField:@"nojsoncallback"];
+    
+    // ★★ここがgtm-oauthを使った場合のポイントです！！
+    // 認証情報の追加
+    // この作業は、HTTPBodyやHTTP Headerなどの付与が終わった最後に行う必要があります。
+    // これを行った後にリクエストにデータを追加すると、シグニチャ（署名）不正のエラーがかえってきます。
+    [request setHTTPMethod:@"GET"];
+    [mAuth authorizeRequest:request];
+    
+    NSString* tempStr = [[request URL] absoluteString];
+    NSError *error;
+    NSURLResponse *response;
+    NSData *responseData = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
+    
+    NSLog(@"error = %@", error);
+    NSLog(@"statusCode = %d", ((NSHTTPURLResponse *)response).statusCode);
+    NSLog(@"responseText = %@", [[NSString alloc] initWithData:responseData encoding:NSUTF8StringEncoding]);
+    
+    
+    // 認証できていない場合には、認証を始めるように実装してみる。
+    if (error && error.code == kCFURLErrorUserCancelledAuthentication) {
+        NSLog(@"未認証っぽいよー。認証を始めます。");
+    }
+    
+
 }
 @end
